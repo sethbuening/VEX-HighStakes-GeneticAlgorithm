@@ -1,7 +1,7 @@
 from deap import base
 from deap import creator
 from deap import tools
-import random, Simulation, pybullet
+import random, pybullet_data, Simulation, pybullet, time
 
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -10,10 +10,10 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 WEIGHTS = 272
 BIASES = 26
 PARAMETERS = WEIGHTS+BIASES
-INITIAL_RANGE = 0.05
+INITIAL_RANGE = 1
 
 # Variables for evaluation loop
-populationSize = 100
+populationSize = 50
 loadingSize = 50
 
 # Selection variables
@@ -23,7 +23,7 @@ NOT = int(populationSize * (1-ELITEP)) # to keep the population size the same ov
 
 # Probabilites for crossover and mutation
 CXPB = 0.8
-MUTPB = 0.1
+MUTPB = 0.2
 
 def evaluate_individual(individual):
     weights = [individual[i] for i in range(WEIGHTS)]
@@ -50,14 +50,16 @@ toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.ran
 toolbox.register("evaluate", evaluate_individual)
 toolbox.register("select", select_individuals)
 toolbox.register("mate", tools.cxUniform, indpb=0.5) # Probability for the genes to switch
-toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.05) # mean = 0, stdev = 0.15, 
-                                                                            # chance for each value (not individual) to mutate = 0.05
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.075) # mean = 0, stdev = 0.15, 
+                                                                            # chance for each value (not individual) to mutate = 0.075
 # function to initialize population
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 # Initialize and evaluate the first population
 
 #Set up the simulation to be run
 simId = pybullet.connect(pybullet.DIRECT)
+pybullet.setAdditionalSearchPath(pybullet_data.getDataPath())
+pybullet.setGravity(0, 0, -9.81)
 
 population = toolbox.population(n=populationSize)
 print("Evaluating " + str(len(population)) + " individuals:")
@@ -65,8 +67,8 @@ for ind in population:
     ind.fitness.values = (toolbox.evaluate(ind),)
     i = population.index(ind)+1
     x = int(((i/populationSize)*loadingSize))
-    timeLeft = 2.5*(populationSize-i)
-    print(" "*(loadingSize+43), end="\r") # clear the line to print again; printing over itself may leave some artifacts
+    timeLeft = 1.25*(populationSize-i) # 1 second is the average time to run a single simulation
+    print(" "*(loadingSize+43), end="\r") # clear the line to print again
     print(
         "Gen1:Loading|" + "#"*x + "-"*(loadingSize-x) + 
         "| eta: " + str(int(timeLeft/60)) + " minutes, " + str(int(timeLeft%60)) + " seconds", 
@@ -82,7 +84,7 @@ hallOfFame = [population[fitnesses.index(bestFitness)]]
 # Loop runs until a specified fitness goal is reached
 fitnessGoal = 100 # 100 is the best score possible
 generationNum = 2
-while (len(hallOfFame) < 15): #bestFitness < fitnessGoal
+while (generationNum <= 30): #bestFitness < fitnessGoal
     # Selection
     offspring = toolbox.select(population)
 
@@ -106,8 +108,8 @@ while (len(hallOfFame) < 15): #bestFitness < fitnessGoal
         ind.fitness.values = (toolbox.evaluate(ind),)
         i = invalid_individuals.index(ind)+1
         x = int(((i/(len(invalid_individuals)))*loadingSize))
-        timeLeft = 2.5*(populationSize-i)
-        print(" "*(loadingSize+41), end="\r") # clear the line to print again; printing over itself may leave some artifacts
+        timeLeft = 1.25*(populationSize-i)
+        print(" "*(loadingSize+43), end="\r") # clear the line to print again
         print(
             "Gen" + str(generationNum) + ":Loading|" + "#"*x + "-"*(loadingSize-x) + 
             "| eta: " + str(int(timeLeft/60)) + " minutes, " + str(int(timeLeft%60)) + " seconds", 
@@ -121,5 +123,5 @@ while (len(hallOfFame) < 15): #bestFitness < fitnessGoal
     bestFitness = max(fitnesses)
     hallOfFame.append(population[fitnesses.index(bestFitness)])
     generationNum += 1
-print(hallOfFame[14])
+print(hallOfFame[-1])
 pybullet.disconnect(simId)

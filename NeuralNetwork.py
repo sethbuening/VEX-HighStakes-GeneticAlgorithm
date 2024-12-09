@@ -3,7 +3,7 @@ class NeuralNetwork(t.nn.Module):
     def __init__(self, weights, biases):
         super().__init__()
         # Define layers
-        t.set_num_threads(14)
+        t.set_num_threads(10)
         self.layer1 = t.nn.Linear(8, 16)
         self.layer2 = t.nn.Linear(16, 8)
         self.layer3 = t.nn.Linear(8, 2)
@@ -24,7 +24,7 @@ class NeuralNetwork(t.nn.Module):
 
     def forward(self, x):
         with t.no_grad():
-            x = t.relu(self.layer1(x))
-            x = t.relu(self.layer2(x))
-            output = list(self.layer3(x))
+            x = t.tanh(self.layer1(x)) # tanh instead of relu because we need negative values in order to be able to turn instead of just moving straight or backwards
+            x = t.tanh(self.layer2(x))
+            output = self.layer3(x)
             return output[0].item(),output[1].item()

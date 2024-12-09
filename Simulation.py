@@ -1,12 +1,8 @@
 import pybullet as p
-import pybullet_data, math, torch, os
+import math, torch, os
 import NeuralNetwork
 
 def suppress_output(func, *args, **kwargs):
-    """
-    Suppresses all output (stdout and stderr) during the execution of the given function.
-    This includes Python and lower-level C library outputs.
-    """
     # Redirect low-level stdout and stderr
     with open(os.devnull, 'w') as devnull:
         old_stdout = os.dup(1)  # Save the original stdout
@@ -23,8 +19,6 @@ def suppress_output(func, *args, **kwargs):
 
 def runSimulation(weights, biases):
     p.resetSimulation()
-    p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally for the basic URDF files
-    p.setGravity(0, 0, -9.81)
 
     # Load URDF files
     _ = p.loadURDF("plane.urdf")
@@ -43,7 +37,7 @@ def runSimulation(weights, biases):
     targetVelLeft = 0 #rad/s
     targetVelRight = 0 #rad/s
     maxForce = 10  #Newton
-    instance = NeuralNetwork.NeuralNetwork(weights, biases) # import weights and biases from the genetic loop file
+    network = NeuralNetwork.NeuralNetwork(weights, biases) # import weights and biases from the genetic loop file
     # JOINTS:
     #2,4 left
     #3,5 right
@@ -54,7 +48,7 @@ def runSimulation(weights, biases):
             position, _ = p.getBasePositionAndOrientation(obj)
             input.extend([position[0], position[1]])
         # Calculate motor velocity with neural network
-        targetVelLeft,targetVelRight = instance.forward(torch.tensor(input))
+        targetVelLeft,targetVelRight = network.forward(torch.tensor(input).unsqueeze(0))
         # Move the motors
         p.setJointMotorControl(robotId, 2, p.VELOCITY_CONTROL, targetVelLeft, maxForce)
         p.setJointMotorControl(robotId, 3, p.VELOCITY_CONTROL, targetVelRight, maxForce)
